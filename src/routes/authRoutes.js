@@ -86,13 +86,13 @@ router.post("/login", async (req, res) => {
     // bisa login pakai email (owner) atau username (employee)
     const [users] = await db.query(
       `
-      SELECT
-        u.*,
-        e.outlet_id
-      FROM users u
-      LEFT JOIN employees e
-      ON u.employee_id = e.id
-      WHERE u.email = ? OR u.username = ?
+SELECT
+  u.*,
+  e.outlet_id AS employee_outlet_id
+FROM users u
+LEFT JOIN employees e
+ON u.employee_id = e.id
+WHERE u.email = ? OR u.username = ?
       `,
       [login, login]
     );
@@ -156,7 +156,7 @@ router.post("/login", async (req, res) => {
         user_id: user.id,
         owner_id: user.owner_id,
         role_id: user.role_id,
-        outlet_id: user.outlet_id || null,   // 🔥 penting untuk kasir
+        outlet_id: user.employee_outlet_id || null,   // 🔥 penting untuk kasir
         employee_id: user.employee_id || null,
         is_primary_owner: user.is_primary_owner,
         permissions

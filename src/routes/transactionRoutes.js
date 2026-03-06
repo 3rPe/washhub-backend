@@ -110,7 +110,6 @@ router.post("/:id/pay", verifyToken, async (req, res) => {
     const ownerId = req.user.owner_id;
     const { amount, method, payment_type } = req.body;
 
-    // VALIDASI TRANSAKSI MILIK OWNER
     const [trx] = await db.query(
       "SELECT total FROM transactions WHERE id = ? AND owner_id = ?",
       [transactionId, ownerId]
@@ -215,14 +214,14 @@ router.put(
 );
 
 
-// =====================================================
-// LIST ACTIVE (PRODUCTION)
-// =====================================================
 router.get("/active", verifyToken, async (req, res) => {
   try {
-    const ownerId = req.user.owner_id;
 
-    const [results] = await db.query(`
+    const ownerId = req.user.owner_id;
+    const outletId = req.user.outlet_id;
+    const isOwner = req.user.is_primary_owner;
+
+    let query = `
       SELECT 
         t.id,
         t.invoice_number,
@@ -236,9 +235,21 @@ router.get("/active", verifyToken, async (req, res) => {
       LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
       WHERE t.status = 'process'
       AND t.owner_id = ?
+    `;
+
+    const params = [ownerId];
+
+    if (!isOwner) {
+      query += " AND t.outlet_id = ?";
+      params.push(outletId);
+    }
+
+    query += `
       GROUP BY t.id
       ORDER BY t.created_at ASC
-    `, [ownerId]);
+    `;
+
+    const [results] = await db.query(query, params);
 
     res.json(results);
 
@@ -256,9 +267,12 @@ router.get(
   verifyToken,
   async (req, res) => {
     try {
-      const ownerId = req.user.owner_id;
 
-      const [results] = await db.query(`
+      const ownerId = req.user.owner_id;
+      const outletId = req.user.outlet_id;
+      const isOwner = req.user.is_primary_owner;
+
+      let query = `
         SELECT 
           t.id,
           t.invoice_number,
@@ -274,9 +288,21 @@ router.get(
         JOIN customers c ON t.customer_id = c.id
         LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
         WHERE t.owner_id = ?
+      `;
+
+      const params = [ownerId];
+
+      if (!isOwner) {
+        query += " AND t.outlet_id = ?";
+        params.push(outletId);
+      }
+
+      query += `
         GROUP BY t.id
         ORDER BY t.created_at DESC
-      `, [ownerId]);
+      `;
+
+      const [results] = await db.query(query, params);
 
       res.json(results);
 
@@ -356,65 +382,5 @@ router.get(
   }
 );
 
-// =====================================================
-// REPORT TRANSACTIONS (OWNER DASHBOARD)
-// =====================================================
-router.get("/report", verifyToken, async (req, res) => {
-  try {
-
-    const ownerId = req.user.owner_id;
-
-    const {
-      outlet_id,
-      start_date,
-      end_date
-    } = req.query;
-
-    let query = `
-      SELECT
-        t.id,
-        t.invoice_number,
-        t.total,
-        t.payment_status,
-        t.status,
-        t.created_at,
-        c.name AS customer_name,
-        o.name AS outlet_name
-      FROM transactions t
-      JOIN customers c ON t.customer_id = c.id
-      JOIN outlets o ON t.outlet_id = o.id
-      WHERE t.owner_id = ?
-    `;
-
-    const params = [ownerId];
-
-    // FILTER OUTLET
-    if (outlet_id) {
-      query += " AND t.outlet_id = ?";
-      params.push(outlet_id);
-    }
-
-    // FILTER START DATE
-    if (start_date) {
-      query += " AND DATE(t.created_at) >= ?";
-      params.push(start_date);
-    }
-
-    // FILTER END DATE
-    if (end_date) {
-      query += " AND DATE(t.created_at) <= ?";
-      params.push(end_date);
-    }
-
-    query += " ORDER BY t.created_at DESC";
-
-    const [results] = await db.query(query, params);
-
-    res.json(results);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 module.exports = router;

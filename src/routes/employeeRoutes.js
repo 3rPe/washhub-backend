@@ -159,8 +159,9 @@ router.get("/summary/total", verifyToken, async (req, res) => {
 
     let query = `
       SELECT COUNT(*) as total
-      FROM employees
-      WHERE owner_id = ?
+FROM employees
+WHERE owner_id = ?
+AND is_active = TRUE
     `;
 
     const params = [ownerId];

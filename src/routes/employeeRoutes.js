@@ -154,14 +154,15 @@ await connection.query(
 // ======================================================
 router.get("/summary/total", verifyToken, async (req, res) => {
   try {
+
     const ownerId = req.user.owner_id;
     const outletId = req.query.outlet_id;
 
     let query = `
       SELECT COUNT(*) as total
-FROM employees
-WHERE owner_id = ?
-AND is_active = TRUE
+      FROM employees
+      WHERE owner_id = ?
+      AND is_active = TRUE
     `;
 
     const params = [ownerId];
@@ -176,6 +177,7 @@ AND is_active = TRUE
     res.json(rows[0]);
 
   } catch (error) {
+    console.error("Summary error:", error);
     res.status(500).json({ error: error.message });
   }
 });

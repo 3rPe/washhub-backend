@@ -201,6 +201,7 @@ router.get(
         FROM employees e
         LEFT JOIN outlets o ON e.outlet_id = o.id
         WHERE e.owner_id = ?
+        AND e.is_active = TRUE
       `;
 
       const params = [ownerId];

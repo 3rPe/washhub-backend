@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 
-/* ===============================
+/* ==============================
    REGISTER OWNER (PUBLIC)
 ================================ */
 router.post("/register-owner", async (req, res) => {

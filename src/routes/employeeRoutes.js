@@ -64,11 +64,22 @@ router.post("/", verifyToken, async (req, res) => {
 
     const employeeId = empResult.insertId;
 
-    const employeeCode = `EMP-${employeeId}`;
-    await connection.query(
-      `UPDATE employees SET employee_code = ? WHERE id = ?`,
-      [employeeCode, employeeId]
-    );
+// ambil jumlah employee milik owner ini
+const [countRows] = await connection.query(
+  `SELECT COUNT(*) as total 
+   FROM employees 
+   WHERE owner_id = ?`,
+  [ownerId]
+);
+
+const employeeNumber = countRows[0].total;
+
+const employeeCode = `EMP-${employeeNumber}`;
+
+await connection.query(
+  `UPDATE employees SET employee_code = ? WHERE id = ?`,
+  [employeeCode, employeeId]
+);
 
     // INSERT POSITIONS
     let roleId = null;
@@ -371,6 +382,100 @@ router.put("/:id", verifyToken, async (req, res) => {
   } catch (error) {
     await connection.rollback();
     connection.release();
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ======================================================
+// NONAKTIFKAN EMPLOYEE (RESIGN)
+// ======================================================
+router.put("/:id/deactivate", verifyToken, async (req, res) => {
+  try {
+
+    const ownerId = req.user.owner_id;
+    const employeeId = req.params.id;
+
+    await db.query(
+      `UPDATE employees
+       SET is_active = FALSE,
+           resigned_at = NOW()
+       WHERE id = ? AND owner_id = ?`,
+      [employeeId, ownerId]
+    );
+
+    // matikan login user juga
+    await db.query(
+      `UPDATE users
+       SET is_active = FALSE
+       WHERE employee_id = ?`,
+      [employeeId]
+    );
+
+    res.json({ message: "Employee deactivated" });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ======================================================
+// AKTIFKAN KEMBALI EMPLOYEE
+// ======================================================
+router.put("/:id/activate", verifyToken, async (req, res) => {
+  try {
+
+    const ownerId = req.user.owner_id;
+    const employeeId = req.params.id;
+
+    await db.query(
+      `UPDATE employees
+       SET is_active = TRUE,
+           resigned_at = NULL
+       WHERE id = ? AND owner_id = ?`,
+      [employeeId, ownerId]
+    );
+
+    await db.query(
+      `UPDATE users
+       SET is_active = TRUE
+       WHERE employee_id = ?`,
+      [employeeId]
+    );
+
+    res.json({ message: "Employee activated again" });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ======================================================
+// DEACTIVATE EMPLOYEE
+// ======================================================
+router.put("/:id/deactivate", verifyToken, async (req, res) => {
+  try {
+
+    const ownerId = req.user.owner_id;
+    const employeeId = req.params.id;
+
+    await db.query(
+      `UPDATE employees
+       SET is_active = FALSE,
+           resigned_at = NOW()
+       WHERE id = ? AND owner_id = ?`,
+      [employeeId, ownerId]
+    );
+
+    await db.query(
+      `UPDATE users
+       SET is_active = FALSE
+       WHERE employee_id = ?`,
+      [employeeId]
+    );
+
+    res.json({ message: "Employee deactivated" });
+
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
